@@ -1,0 +1,78 @@
+from keras.models import Sequential
+from keras.layers import Convolution2D
+from keras.layers import MaxPooling2D
+from keras.layers import Flatten
+from keras.layers import Dense
+import numpy 
+import numpy as np
+from keras.models import Model
+from keras.layers import Dense, Concatenate, Input
+from keras.layers import LSTM
+from keras.utils import np_utils
+ 
+# Initialising the CNN
+classifier = Sequential()
+ 
+# Step 1 - Convolution
+classifier.add(Convolution2D(32, 3, 3, input_shape = (100,100, 3), activation = 'relu'))
+ 
+# Step 2 - Pooling
+classifier.add(MaxPooling2D(pool_size = (2, 2)))
+ 
+# Adding a second convolutional layer
+classifier.add(Convolution2D(32, 3, 3, activation = 'relu'))
+classifier.add(MaxPooling2D(pool_size = (2, 2)))
+ 
+# Step 3 - Flattening
+classifier.add(Flatten())
+
+#otherInp = Flatten(shape = (None,100 )intermediate_layer)
+#concatenatedFeatures = Concatenate(axis = 1)([flat, otherInp])
+import tensorflow as tf
+#from keras.layers import concatenate classifier.output()
+otherInp = Input(shape = (100, ),name='intermediate_layer')
+concatenatedFeatures = Concatenate(axis = 1)([classifier.layers[4].output, otherInp])
+dense = Dense(128)(concatenatedFeatures)
+
+
+# Step 4 - Full connection
+classifier.add(Dense(output_dim = 128, activation = 'relu'))
+classifier.add(Dense(output_dim = 1, activation = 'sigmoid'))
+ 
+# Compiling the CNN
+classifier.compile(optimizer = 'adam', loss = 'binary_crossentropy', metrics = ['accuracy'])
+from keras.preprocessing.image import ImageDataGenerator
+train_datagen = ImageDataGenerator(rescale = 1./255,
+                                   shear_range = 0.2,
+                                   zoom_range = 0.2,
+                                   horizontal_flip = True)
+ 
+test_datagen = ImageDataGenerator(rescale = 1./255)
+training_set = train_datagen.flow_from_directory('C:\\Users\\NEW\\Downloads\\dataset',
+                                                 target_size = (100,100),
+                                                 batch_size = 32,
+                                                 class_mode = 'binary')
+ 
+test_set = test_datagen.flow_from_directory('C:\\Users\\NEW\\Downloads\\dataset1',
+                                            target_size = (100,100),
+                                            batch_size = 32,
+                                            class_mode = 'binary')
+
+classifier.fit_generator(training_set,
+                         steps_per_epoch = (8000/32),
+                         epochs =25,
+                         validation_data = test_set,
+                         validation_steps = (2000/32))
+
+classifier.summary()
+import numpy
+from keras import backend as K
+
+inp = classifier.input                                           # input placeholder
+outputs =classifier.layers[4].output          # all layer outputs
+functors =K.function([inp], [outputs])    # evaluation functions
+
+# Testing
+test = numpy.random.random((64,64,3))[numpy.newaxis,...]
+layer_outs = functors([test])
+#print (layer_outs)
